@@ -60,7 +60,7 @@ const mongoClient = new MongoClient(config.mongodb.uri, {
 async function connectDatabase() {
     try {
         await mongoClient.connect();
-        db = mongoClient.db('ksu-discussion-3340');
+        db = mongoClient.db('ksu-discussion');
         postsCollection = db.collection('posts');
         draftsCollection = db.collection('drafts');
         outcomesCollection = db.collection('outcomes');
@@ -116,7 +116,7 @@ const sessionConfig = {
 if (!isDev) {
     sessionConfig.store = MongoStore.create({
         mongoUrl: config.mongodb.uri,
-        dbName: 'ksu-discussion-3340',
+        dbName: 'ksu-discussion',
         collectionName: 'sessions',
         ttl: 24 * 60 * 60
     });
