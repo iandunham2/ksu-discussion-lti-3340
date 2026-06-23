@@ -318,6 +318,10 @@ app.post('/lti/launch', (req, res) => {
         if (!disc && req.body.ext_d2l_link_id) {
             disc = TOPIC_ID_TO_DISC_INLINE[String(req.body.ext_d2l_link_id)] || null;
         }
+        // Also try resource_link_id which might contain the content topic ID
+        if (!disc && req.body.resource_link_id) {
+            disc = TOPIC_ID_TO_DISC_INLINE[String(req.body.resource_link_id)] || null;
+        }
 
         // Title map fallback — COMM 3340 only
         if (!disc) {
@@ -334,9 +338,9 @@ app.post('/lti/launch', (req, res) => {
         }
 
         if (disc) {
-            console.log(`[LTI Launch] Resolved disc=${disc} (title="${ltiData.resourceLinkTitle}", ext_d2l_link_id=${req.body.ext_d2l_link_id || 'n/a'}, query.disc=${req.query.disc || 'n/a'})`);
+            console.log(`[LTI Launch] Resolved disc=${disc} (title="${ltiData.resourceLinkTitle}", ext_d2l_link_id=${req.body.ext_d2l_link_id || 'n/a'}, resource_link_id=${req.body.resource_link_id || 'n/a'}, query.disc=${req.query.disc || 'n/a'})`);
         } else {
-            console.warn(`[LTI Launch] Could not resolve disc title="${ltiData.resourceLinkTitle}" ext_d2l_link_id=${req.body.ext_d2l_link_id || 'n/a'}`);
+            console.warn(`[LTI Launch] Could not resolve disc title="${ltiData.resourceLinkTitle}" ext_d2l_link_id=${req.body.ext_d2l_link_id || 'n/a'} resource_link_id=${req.body.resource_link_id || 'n/a'}`);
         }
 
         // Persist mapping keyed by resourceLinkId (unique per placed D2L link)
