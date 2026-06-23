@@ -182,7 +182,7 @@ app.all('/lti/launch', async (req, res, next) => {
             id: req.query.user_id || 'student-' + Date.now(),
             name: req.query.user_name || 'Student',
             email: req.query.user_email || 'student@kennesaw.edu',
-            isInstructor: req.query.role === 'instructor' || req.query.role !== 'student',
+            isInstructor: req.query.instructor === 'true' || req.query.role === 'instructor' || req.query.role !== 'student' || true, // Default to instructor for testing
             contextId: contextId,
             contextTitle: 'Digital Media Production Section W01 Summer Semester 2026 CO',
             resourceLinkId: req.query.resource_link_id || disc,
