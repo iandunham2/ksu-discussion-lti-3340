@@ -510,14 +510,15 @@ app.post('/api/instructor/set-disc', requireInstructor, (req, res) => {
 // List all distinct disc values that have posts (for instructor dropdown)
 app.get('/api/instructor/disc-list', requireInstructor, async (req, res) => {
     try {
-        const contextTitle = req.session.user.contextTitle;
+        const contextId = req.session.user.contextId;
         let discs;
         // Course-wide dashboard: list distinct disc values across the whole course
-        // (by contextTitle), not just the instructor's single launched link.
+        // (by contextId), not just the instructor's single launched link.
+        // contextId is stable across all posts for a given course; contextTitle can vary.
         if (postsCollection) {
-            discs = await postsCollection.distinct('disc', { contextTitle });
+            discs = await postsCollection.distinct('disc', { contextId });
         } else {
-            const all = (global.inMemoryPosts || []).filter(p => p.contextTitle === contextTitle);
+            const all = (global.inMemoryPosts || []).filter(p => p.contextId === contextId);
             discs = [...new Set(all.map(p => p.disc).filter(Boolean))];
         }
         // Attach labels from discussionLabels
@@ -829,14 +830,14 @@ async function runAIDetection(text) {
 app.get('/api/instructor/posts', requireInstructor, async (req, res) => {
     try {
         const resourceLinkId = req.session.user.resourceLinkId;
-        const contextTitle = req.session.user.contextTitle;
+        const contextId = req.session.user.contextId;
         const disc = req.session.user.disc;
-        // Group by contextTitle (the stable course identifier) so an instructor sees all
-        // discussions within their course. D2L can issue different context_ids for the same
-        // course, so contextId is unreliable for course-wide grouping (see DEVELOPER-NOTES).
+        // Group by contextId (the stable course identifier) so an instructor sees all
+        // discussions within their course. contextId is stable across all posts for a given course;
+        // contextTitle can vary across launches for the same course.
         // If a specific disc is selected, additionally filter by disc value.
-        console.log('[instructor/posts] contextTitle:', contextTitle, 'resourceLinkId:', resourceLinkId, 'disc:', disc);
-        const query = disc ? { contextTitle, disc } : { contextTitle };
+        console.log('[instructor/posts] contextId:', contextId, 'resourceLinkId:', resourceLinkId, 'disc:', disc);
+        const query = disc ? { contextId, disc } : { contextId };
         let posts;
 
         if (postsCollection) {
@@ -846,7 +847,7 @@ app.get('/api/instructor/posts', requireInstructor, async (req, res) => {
                 .toArray();
         } else {
             posts = (global.inMemoryPosts || [])
-                .filter(p => p.contextTitle === contextTitle && (!disc || p.disc === disc))
+                .filter(p => p.contextId === contextId && (!disc || p.disc === disc))
                 .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         }
 
