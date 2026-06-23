@@ -1,6 +1,6 @@
 {
   "name": "ksu-discussion-lti-3340",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "LTI 1.1 Discussion Tool with AI Detection for KSU D2L Brightspace — COMM 3340 only",
   "main": "server.js",
   "scripts": {
