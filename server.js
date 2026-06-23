@@ -302,6 +302,11 @@ app.post('/lti/launch', (req, res) => {
         // Query param takes highest priority — allows unique URLs like ?disc=3340-mod5
         let disc = req.query.disc || null;
 
+        // Custom parameter from quicklink
+        if (!disc && req.body.custom_disc) {
+            disc = req.body.custom_disc;
+        }
+
         // ext_d2l_link_id is the D2L content topic ID — unique per placed link, most reliable
         const TOPIC_ID_TO_DISC_INLINE = {
             '61805440': '3340-mod1',  '61805441': '3340-mod2',  '61805442': '3340-mod3',
