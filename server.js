@@ -263,6 +263,7 @@ app.post('/lti/launch', (req, res) => {
             outcomeServiceUrl: req.body.lis_outcome_service_url || '',
             resultSourcedId: req.body.lis_result_sourcedid || ''
         };
+        console.log('[LTI Launch] contextId:', ltiData.contextId, 'contextTitle:', ltiData.contextTitle, 'user:', ltiData.userName);
 
         // Determine if user is instructor
         const isInstructor = config.instructorRoles.some(role =>
