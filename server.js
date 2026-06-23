@@ -184,7 +184,7 @@ app.all('/lti/launch', async (req, res, next) => {
             email: req.query.user_email || 'student@kennesaw.edu',
             isInstructor: false,
             contextId: contextId,
-            contextTitle: 'COMM 3340',
+            contextTitle: 'Digital Media Production Section W01 Summer Semester 2026 CO',
             resourceLinkId: req.query.resource_link_id || disc,
             resourceLinkTitle: disc,
             disc: disc,
