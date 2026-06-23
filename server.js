@@ -517,26 +517,50 @@ app.post('/api/instructor/set-disc', requireInstructor, (req, res) => {
     res.json({ success: true, disc: req.session.user.disc });
 });
 
-// List all distinct disc values that have posts (for instructor dropdown)
+// List all discussions for the instructor dropdown — includes discs with posts
+// plus a static list of all known 3340 discussions so empty ones show up too.
+const ALL_3340_DISCS = [
+    { disc: '3340-mod1',  label: 'Module 1 Discussion: The Ethics of the Histogram' },
+    { disc: '3340-mod2',  label: 'Module 2 Discussion: Where Do We Draw the Line?' },
+    { disc: '3340-mod3',  label: 'Module 3 Discussion: The Ethics of Composite Photography' },
+    { disc: '3340-mod4',  label: 'Module 4 Discussion: Visual Strategy in Social Media Campaigns' },
+    { disc: '3340-mod5',  label: 'Module 5 Discussion: Favorite Podcasts' },
+    { disc: '3340-mod6',  label: 'Module 6 Discussion: The Art of the Mix' },
+    { disc: '3340-mod7',  label: 'Module 7 Discussion: Sound Design vs. Music' },
+    { disc: '3340-mod8',  label: 'Module 8 Discussion: The Invisible Art of Dialogue Editing' },
+    { disc: '3340-mod9',  label: 'Module 9 Discussion: Best Edited Scenes in Film' },
+    { disc: '3340-mod10', label: 'Module 10 Discussion: The Illusion of Place' },
+    { disc: '3340-mod11', label: 'Module 11 Discussion: The Patience of Rotoscoping' },
+    { disc: '3340-mod13', label: 'Module 13 Discussion: The Gig Economy & Career Strategy' },
+    { disc: '3340-mod15', label: 'Module 15 Discussion: Final Showcase' },
+];
+
 app.get('/api/instructor/disc-list', requireInstructor, async (req, res) => {
     try {
         const contextId = req.session.user.contextId;
-        let discs;
+        let discsFromPosts;
         // Course-wide dashboard: list distinct disc values across the whole course
-        // (by contextId), not just the instructor's single launched link.
-        // contextId is stable across all posts for a given course; contextTitle can vary.
         if (postsCollection) {
-            discs = await postsCollection.distinct('disc', { contextId });
+            discsFromPosts = await postsCollection.distinct('disc', { contextId });
         } else {
             const all = (global.inMemoryPosts || []).filter(p => p.contextId === contextId);
-            discs = [...new Set(all.map(p => p.disc).filter(Boolean))];
+            discsFromPosts = [...new Set(all.map(p => p.disc).filter(Boolean))];
         }
+
+        // Merge: start with static list, add any discs from posts that aren't in the static list
+        const staticDiscs = ALL_3340_DISCS.map(d => d.disc);
+        const extraDiscs = discsFromPosts.filter(Boolean).filter(d => !staticDiscs.includes(d));
+        const allDiscs = [...ALL_3340_DISCS.map(d => d.disc), ...extraDiscs];
+
         // Attach labels from discussionLabels
-        let labeled = discs.filter(Boolean).map(d => ({ disc: d, label: d }));
+        let labeled = allDiscs.map(d => {
+            const staticEntry = ALL_3340_DISCS.find(s => s.disc === d);
+            return { disc: d, label: staticEntry ? staticEntry.label : d };
+        });
         if (discussionLabelsCollection) {
-            const docs = await discussionLabelsCollection.find({ resourceLinkId: { $in: discs.filter(Boolean) } }).toArray();
+            const docs = await discussionLabelsCollection.find({ resourceLinkId: { $in: allDiscs } }).toArray();
             const map = Object.fromEntries(docs.map(d => [d.resourceLinkId, d.label]));
-            labeled = labeled.map(d => ({ disc: d.disc, label: map[d.disc] || d.disc }));
+            labeled = labeled.map(d => ({ disc: d.disc, label: map[d.disc] || d.label }));
         }
         res.json(labeled);
     } catch (e) {
