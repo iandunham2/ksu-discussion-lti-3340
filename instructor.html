@@ -420,19 +420,6 @@
             </div>
             <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
                 <button class="refresh-btn" onclick="loadSubmissions()" style="margin-bottom: 0;">🔄 Refresh Posts</button>
-                <div style="flex: 1; min-width: 250px;">
-                    <label for="module-filter" style="font-weight: bold; margin-right: 10px;">Module:</label>
-                    <select id="module-filter" onchange="filterByModule()" style="padding: 10px; border-radius: 5px; border: 2px solid #FFC72C; background: white; font-size: 1em; min-width: 200px;">
-                        <option value="all">All Modules</option>
-                    </select>
-                    <button id="rename-module-btn" onclick="renameModule()" title="Rename the selected discussion" style="display: none; margin-left: 8px; padding: 9px 12px; border-radius: 5px; border: 2px solid #FFC72C; background: white; cursor: pointer; font-size: 0.95em;">✏️ Rename</button>
-                </div>
-                <div style="flex: 1; min-width: 250px;">
-                    <label for="thread-filter" style="font-weight: bold; margin-right: 10px;">Thread:</label>
-                    <select id="thread-filter" onchange="filterByThread()" style="padding: 10px; border-radius: 5px; border: 2px solid #FFC72C; background: white; font-size: 1em; min-width: 200px;">
-                        <option value="all">All Threads</option>
-                    </select>
-                </div>
             </div>
             <div id="submissions-list"></div>
         </div>
@@ -442,7 +429,6 @@
         const expandedStudents = new Set();
         const expandedPosts = new Set();
         let allSubmissions = [];
-        let allModules = [];
 
         async function loadDiscList() {
             const sel = document.getElementById('disc-select');
@@ -489,161 +475,19 @@
         }
 
         loadDiscList();
-        let allThreads = [];
-        let currentModuleFilter = 'all';
-        let currentThreadFilter = 'all';
 
         async function loadSubmissions() {
             try {
                 const response = await fetch('/api/instructor/posts');
                 const submissions = await response.json();
                 allSubmissions = submissions;
-                
-                // Extract unique modules
-                const moduleMap = new Map();
-                submissions.forEach(p => {
-                    const key = p.resourceLinkId || 'unknown';
-                    const title = p.moduleLabel || p.resourceLinkTitle || 'Unknown Module';
-                    if (!moduleMap.has(key)) {
-                        moduleMap.set(key, { id: key, title: title });
-                    }
-                });
-                allModules = Array.from(moduleMap.values())
-                    .sort((a, b) => a.title.localeCompare(b.title));
-                
-                // Extract unique threads (top-level posts)
-                allThreads = submissions
-                    .filter(p => !p.parentId)
-                    .map(p => ({
-                        id: p.id,
-                        moduleId: p.resourceLinkId,
-                        moduleTitle: p.moduleLabel || p.resourceLinkTitle || 'Unknown Module',
-                        title: p.text.substring(0, 60) + (p.text.length > 60 ? '...' : ''),
-                        authorName: p.authorName,
-                        timestamp: p.timestamp
-                    }))
-                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                
-                updateModuleFilter();
-                updateThreadFilter();
-                filterByThread();
+                displaySubmissions(submissions);
+                updateStats(submissions);
             } catch (error) {
                 console.error('Error loading submissions:', error);
                 document.getElementById('submissions-list').innerHTML =
                     '<div class="no-submissions"><h2>Error loading submissions</h2><p>' + error.message + '</p></div>';
             }
-        }
-        
-        function updateModuleFilter() {
-            const select = document.getElementById('module-filter');
-            const currentValue = select.value;
-            
-            // Rebuild options
-            select.innerHTML = '<option value="all">All Modules (' + allModules.length + ' modules)</option>';
-            
-            allModules.forEach(module => {
-                const option = document.createElement('option');
-                option.value = module.id;
-                option.textContent = module.title;
-                select.appendChild(option);
-            });
-            
-            // Restore previous selection if it still exists
-            if (currentValue && currentValue !== 'all') {
-                const exists = allModules.find(m => m.id === currentValue);
-                if (exists) select.value = currentValue;
-            }
-        }
-        
-        function updateThreadFilter() {
-            const select = document.getElementById('thread-filter');
-            const currentValue = select.value;
-            
-            // Filter threads by selected module
-            let threadsToShow = allThreads;
-            if (currentModuleFilter !== 'all') {
-                threadsToShow = allThreads.filter(t => t.moduleId === currentModuleFilter);
-            }
-            
-            // Rebuild options
-            select.innerHTML = '<option value="all">All Threads (' + threadsToShow.length + ' threads)</option>';
-            
-            threadsToShow.forEach(thread => {
-                const option = document.createElement('option');
-                option.value = thread.id;
-                const date = new Date(thread.timestamp).toLocaleDateString();
-                option.textContent = `${thread.authorName} - ${date}: ${thread.title}`;
-                select.appendChild(option);
-            });
-            
-            // Restore previous selection if it still exists and is in current module
-            if (currentValue && currentValue !== 'all') {
-                const exists = threadsToShow.find(t => t.id === currentValue);
-                if (exists) {
-                    select.value = currentValue;
-                } else {
-                    select.value = 'all';
-                    currentThreadFilter = 'all';
-                }
-            }
-        }
-        
-        function filterByModule() {
-            const select = document.getElementById('module-filter');
-            currentModuleFilter = select.value;
-            currentThreadFilter = 'all'; // Reset thread filter when module changes
-            // Show the Rename button only when a specific module is selected
-            document.getElementById('rename-module-btn').style.display =
-                currentModuleFilter === 'all' ? 'none' : 'inline-block';
-            updateThreadFilter();
-            filterByThread();
-        }
-
-        async function renameModule() {
-            if (currentModuleFilter === 'all') return;
-            const current = allModules.find(m => m.id === currentModuleFilter);
-            const newName = prompt('Enter a name for this discussion (module):', current ? current.title : '');
-            if (!newName || !newName.trim()) return;
-            try {
-                const res = await fetch('/api/instructor/discussion-label', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ resourceLinkId: currentModuleFilter, label: newName.trim() })
-                });
-                if (!res.ok) {
-                    const err = await res.json().catch(() => ({}));
-                    alert('Could not rename: ' + (err.error || res.status));
-                    return;
-                }
-                await loadSubmissions();
-            } catch (e) {
-                alert('Could not rename: ' + e.message);
-            }
-        }
-        
-        function filterByThread() {
-            const select = document.getElementById('thread-filter');
-            currentThreadFilter = select.value;
-            
-            let filteredSubmissions = allSubmissions;
-            
-            // First filter by module
-            if (currentModuleFilter !== 'all') {
-                filteredSubmissions = filteredSubmissions.filter(post => 
-                    post.resourceLinkId === currentModuleFilter
-                );
-            }
-            
-            // Then filter by thread
-            if (currentThreadFilter !== 'all') {
-                // Get the thread and all its replies
-                filteredSubmissions = filteredSubmissions.filter(post => 
-                    post.id === currentThreadFilter || post.parentId === currentThreadFilter
-                );
-            }
-            
-            displaySubmissions(filteredSubmissions);
-            updateStats(filteredSubmissions);
         }
 
         function updateStats(submissions) {
