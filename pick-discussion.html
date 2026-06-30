@@ -54,11 +54,25 @@ const MODULES_3300 = [
   { value: '3300-disc8', label: 'Discussion 8: Capstone Showcase & Final Peer Critique' },
 ];
 
+// Safari ITP workaround: extract lti_token from URL and persist in sessionStorage
+const urlToken = new URLSearchParams(window.location.search).get('lti_token');
+if (urlToken) {
+  sessionStorage.setItem('lti_token', urlToken);
+  window.history.replaceState({}, '', window.location.pathname);
+}
+const ltiToken = sessionStorage.getItem('lti_token') || null;
+
+function apiHeaders(extra) {
+  const h = Object.assign({ 'Content-Type': 'application/json' }, extra);
+  if (ltiToken) h['X-LTI-Token'] = ltiToken;
+  return h;
+}
+
 async function init() {
   const sel = document.getElementById('disc-select');
   let modules = MODULES_3340; // default
   try {
-    const r = await fetch('/api/user');
+    const r = await fetch('/api/user', { headers: ltiToken ? { 'X-LTI-Token': ltiToken } : {} });
     if (r.ok) {
       const user = await r.json();
       const ctx = user.contextId || '';
@@ -79,9 +93,14 @@ async function saveDisc() {
   const disc = document.getElementById('disc-select').value;
   if (!disc) { document.getElementById('error-msg').style.display = 'block'; return; }
   document.getElementById('error-msg').style.display = 'none';
-  const r = await fetch('/api/set-disc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ disc }) });
-  if (r.ok) { window.location.href = '/discussion.html'; }
-  else { document.getElementById('error-msg').textContent = 'Error saving selection. Please try again.'; document.getElementById('error-msg').style.display = 'block'; }
+  const r = await fetch('/api/set-disc', { method: 'POST', headers: apiHeaders(), body: JSON.stringify({ disc }) });
+  if (r.ok) {
+    // Pass lti_token to discussion.html so Safari ITP sessions stay authenticated
+    window.location.href = ltiToken ? `/discussion.html?lti_token=${ltiToken}` : '/discussion.html';
+  } else {
+    document.getElementById('error-msg').textContent = 'Error saving selection. Please try again.';
+    document.getElementById('error-msg').style.display = 'block';
+  }
 }
 </script>
 </body>
