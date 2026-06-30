@@ -1161,16 +1161,15 @@ app.get('/', (req, res) => {
 // START
 // ======================
 
-async function start() {
-    await connectDatabase();
-    app.listen(PORT, () => {
-        console.log(`✅ KSU Discussion LTI running on port ${PORT}`);
-        console.log(`   Environment: ${isDev ? 'development' : 'production'}`);
-        if (isDev) {
-            console.log(`   Dev login: http://localhost:${PORT}/dev/login?role=student`);
-            console.log(`   Instructor: http://localhost:${PORT}/dev/login?role=instructor`);
-        }
-    });
-}
+app.listen(PORT, () => {
+    console.log(`✅ KSU Discussion LTI running on port ${PORT}`);
+    console.log(`   Environment: ${isDev ? 'development' : 'production'}`);
+    if (isDev) {
+        console.log(`   Dev login: http://localhost:${PORT}/dev/login?role=student`);
+        console.log(`   Instructor: http://localhost:${PORT}/dev/login?role=instructor`);
+    }
+});
 
-start();
+// Connect to MongoDB in the background — don't block server startup.
+// Render's health check will fail (502) if the port isn't listening quickly enough.
+connectDatabase().catch(err => console.error('Database connection error:', err));
